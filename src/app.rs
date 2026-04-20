@@ -10,6 +10,7 @@ use crate::{
         keyboard_layout::KeyboardLayout,
         keyboard_submap::KeyboardSubmap,
         media_player::MediaPlayer,
+        media_player_p::MediaPlayerP,
         notifications::Notifications,
         privacy::Privacy,
         settings::Settings,
@@ -61,6 +62,7 @@ pub struct App {
     pub privacy: Privacy,
     pub settings: Settings,
     pub media_player: MediaPlayer,
+    pub media_player_p: MediaPlayerP,
     pub notifications: Notifications,
     pub visible: bool,
 }
@@ -82,6 +84,7 @@ pub enum Message {
     Privacy(modules::privacy::Message),
     Settings(modules::settings::Message),
     MediaPlayer(modules::media_player::Message),
+    MediaPlayerP(modules::media_player_p::Message),
     Notifications(modules::notifications::Message),
     OutputEvent(OutputEvent),
     CloseAllMenus,
@@ -136,6 +139,7 @@ impl App {
                     settings: Settings::new(config.settings),
                     notifications,
                     media_player: MediaPlayer::new(config.media_player),
+                    media_player_p: MediaPlayerP::new(config.media_player_p),
                     visible: true,
                 },
                 task,
@@ -190,6 +194,10 @@ impl App {
         self.media_player
             .update(modules::media_player::Message::ConfigReloaded(
                 config.media_player,
+            ));
+        self.media_player_p
+            .update(modules::media_player_p::Message::ConfigReloaded(
+                config.media_player_p,
             ));
         let _ = self
             .notifications
@@ -392,6 +400,15 @@ impl App {
                 modules::media_player::Action::None => Task::none(),
                 modules::media_player::Action::Command(task) => task.map(Message::MediaPlayer),
             },
+            Message::MediaPlayerP(msg) => match self.media_player_p.update(msg) {
+                modules::media_player_p::Action::None => Task::none(),
+                modules::media_player_p::Action::Command(task) => {
+                    task.map(Message::MediaPlayerP)
+                }
+                modules::media_player_p::Action::OpenMenu(id, button_ui_ref) => self
+                    .outputs
+                    .toggle_menu(id, MenuType::MediaPlayerP, button_ui_ref, self.general_config.enable_esc_key),
+            },
             Message::CloseAllMenus => {
                 if self.outputs.menu_is_open() {
                     self.outputs
@@ -581,6 +598,13 @@ impl App {
                     self.media_player
                         .menu_view(&self.theme)
                         .map(Message::MediaPlayer),
+                    *button_ui_ref,
+                ),
+                Some((MenuType::MediaPlayerP, button_ui_ref)) => self.menu_wrapper(
+                    id,
+                    self.media_player_p
+                        .menu_view(id, &self.theme)
+                        .map(Message::MediaPlayerP),
                     *button_ui_ref,
                 ),
                 Some((MenuType::SystemInfo, button_ui_ref)) => self.menu_wrapper(

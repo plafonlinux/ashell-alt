@@ -181,11 +181,11 @@ impl Updates {
         column!(
             if self.updates.is_empty() {
                 convert::Into::<Element<'_, _>>::into(
-                    container(text("Up to date ;)")).padding(theme.space.xs),
+                    container(text("Всё актуально ;)")).padding(theme.space.xs),
                 )
             } else {
                 let mut elements = column!(
-                    styled_button(theme, format!("{} Updates available", self.updates.len()),)
+                    styled_button(theme, format!("Доступно обновлений: {}", self.updates.len()),)
                         .icon(
                             if self.is_updates_list_open {
                                 StaticIcon::MenuClosed
@@ -257,7 +257,7 @@ impl Updates {
 
         if !self.updates.is_empty() {
             buttons = buttons.push(
-                styled_button(theme, "Update")
+                styled_button(theme, "Обновить")
                     .on_press(Message::Update(id))
                     .width(Length::Fill),
             );
@@ -265,7 +265,7 @@ impl Updates {
 
         buttons
             .push(
-                styled_button(theme, "Check now")
+                styled_button(theme, "Проверить")
                     .on_press(Message::CheckNow)
                     .width(Length::Fill),
             )

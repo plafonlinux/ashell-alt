@@ -52,6 +52,22 @@ sudo pacman -S pkg-config llvm clang libxkbcommon wayland \
   dbus pipewire libpulse systemd-libs
 ```
 
+### ALT Linux (Sisyphus / p11)
+
+```bash
+sudo apt-get install -y pkg-config clang libLLVM-devel \
+  libxkbcommon-devel libwayland-devel dbus-devel \
+  libpipewire0.3-devel libpulse-devel libudev-devel
+```
+
+Runtime dependencies are installed automatically as package dependencies.
+
+> **Note:** The Updates module uses `apt-get dist-upgrade --simulate`.
+> To avoid password prompts, add a `NOPASSWD` rule for apt-get in sudoers:
+> ```
+> your_user ALL=(ALL) NOPASSWD: /usr/bin/apt-get
+> ```
+
 ### Nix (Alternative)
 
 If you use Nix, you can skip all of the above. The project's `flake.nix` provides a complete development shell with all dependencies:

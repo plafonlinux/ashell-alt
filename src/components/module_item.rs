@@ -15,6 +15,7 @@ pub struct ModuleItem<'a, Msg> {
     on_right_press: Option<Msg>,
     on_scroll_up: Option<Msg>,
     on_scroll_down: Option<Msg>,
+    h_padding: Option<f32>,
 }
 
 pub fn module_item<'a, Msg: 'static + Clone>(
@@ -29,6 +30,7 @@ pub fn module_item<'a, Msg: 'static + Clone>(
         on_right_press: None,
         on_scroll_up: None,
         on_scroll_down: None,
+        h_padding: None,
     }
 }
 
@@ -57,11 +59,18 @@ impl<'a, Msg: 'static + Clone> ModuleItem<'a, Msg> {
         self.on_scroll_down = Some(msg);
         self
     }
+
+    pub fn h_padding(mut self, padding: f32) -> Self {
+        self.h_padding = Some(padding);
+        self
+    }
 }
 
 impl<'a, Msg: 'static + Clone> From<ModuleItem<'a, Msg>> for Element<'a, Msg> {
     fn from(item: ModuleItem<'a, Msg>) -> Self {
         let has_action = item.on_press.is_some() || item.on_press_with_position.is_some();
+
+        let h = item.h_padding.unwrap_or(item.theme.space.xs);
 
         if has_action {
             let mut button = position_button(
@@ -70,7 +79,7 @@ impl<'a, Msg: 'static + Clone> From<ModuleItem<'a, Msg>> for Element<'a, Msg> {
                     .height(Length::Fill)
                     .clip(true),
             )
-            .padding([2.0, item.theme.space.xs])
+            .padding([2.0, h])
             .height(Length::Fill)
             .style(item.theme.module_button_style());
 
@@ -93,7 +102,7 @@ impl<'a, Msg: 'static + Clone> From<ModuleItem<'a, Msg>> for Element<'a, Msg> {
             button.into()
         } else {
             container(item.content)
-                .padding([2.0, item.theme.space.xs])
+                .padding([2.0, h])
                 .height(Length::Fill)
                 .align_y(Alignment::Center)
                 .clip(true)

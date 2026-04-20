@@ -38,6 +38,7 @@ pub struct Config {
     pub settings: SettingsModuleConfig,
     pub appearance: Appearance,
     pub media_player: MediaPlayerModuleConfig,
+    pub media_player_p: MediaPlayerModuleConfig,
     pub keyboard_layout: KeyboardLayoutModuleConfig,
     pub enable_esc_key: bool,
 }
@@ -59,6 +60,7 @@ impl Default for Config {
             settings: SettingsModuleConfig::default(),
             appearance: Appearance::default(),
             media_player: MediaPlayerModuleConfig::default(),
+            media_player_p: MediaPlayerModuleConfig::default(),
             keyboard_layout: KeyboardLayoutModuleConfig::default(),
             custom_modules: vec![],
             enable_esc_key: false,
@@ -114,15 +116,6 @@ pub struct WorkspacesModuleConfig {
     pub max_workspaces: Option<u32>,
     pub workspace_names: Vec<String>,
     pub enable_virtual_desktops: bool,
-    pub invert_scroll_direction: Option<InvertScrollDirection>,
-}
-
-#[derive(Deserialize, Copy, Clone, Default, PartialEq, Eq, Debug)]
-pub enum InvertScrollDirection {
-    #[default]
-    All,
-    Mouse,
-    Trackpad,
 }
 
 #[derive(Deserialize, Copy, Clone, Default, PartialEq, Eq, Debug)]
@@ -421,7 +414,6 @@ pub struct NotificationsModuleConfig {
     pub toast_timeout: u64,
     pub toast_limit: usize,
     pub toast_max_height: u32,
-    pub blocklist: Vec<RegexCfg>,
 }
 impl Default for NotificationsModuleConfig {
     fn default() -> Self {
@@ -435,7 +427,6 @@ impl Default for NotificationsModuleConfig {
             toast_timeout: 5000,
             toast_limit: 5,
             toast_max_height: 150,
-            blocklist: vec![],
         }
     }
 }
@@ -913,6 +904,7 @@ pub enum ModuleName {
     Privacy,
     Settings,
     MediaPlayer,
+    MediaPlayerP,
     Custom(String),
     Notifications,
 }
@@ -945,6 +937,7 @@ impl<'de> Deserialize<'de> for ModuleName {
                     "Privacy" => ModuleName::Privacy,
                     "Settings" => ModuleName::Settings,
                     "MediaPlayer" => ModuleName::MediaPlayer,
+                    "MediaPlayerP" => ModuleName::MediaPlayerP,
                     other => ModuleName::Custom(other.to_string()),
                 })
             }

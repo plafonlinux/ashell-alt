@@ -53,6 +53,18 @@ src/
 
 libxkbcommon, libwayland, libpipewire-0.3, libpulse, dbus, udev, pkg-config, clang/llvm
 
+### ALT Linux (Sisyphus / p11) build deps
+
+```bash
+sudo apt-get install -y pkg-config clang libLLVM-devel \
+  libxkbcommon-devel libwayland-devel dbus-devel \
+  libpipewire0.3-devel libpulse-devel libudev-devel
+```
+
+Updates module on ALT Linux uses `apt-get dist-upgrade --simulate` parsed by
+`examples/alt-linux/check-updates.sh`. See `examples/alt-linux/config.toml`
+for a full working config.
+
 ## build.rs
 
 The build script does two things:

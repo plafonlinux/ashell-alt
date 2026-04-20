@@ -13,6 +13,7 @@ use iced::{
     stream::channel,
     widget::image,
 };
+use inotify::{EventMask, Inotify, WatchMask};
 use log::{debug, error, info};
 use std::{
     any::TypeId,
@@ -122,17 +123,47 @@ struct ActiveData {
     failed_covers: HashSet<String>,
     in_flight: HashMap<String, AbortHandle>,
     pending_downloads: FuturesUnordered<CoverDownloadFuture>,
+    /// Files preemptively read from /tmp via inotify before Chrome deletes them.
+    /// Keyed by `file:///tmp/...` URL.
+    preempted_files: HashMap<String, Bytes>,
+    tmp_watcher: Option<Box<dyn Stream<Item = String> + Unpin + Send>>,
 }
 
 impl ActiveData {
     fn new(conn: zbus::Connection) -> Self {
+        let tmp_watcher = Self::build_tmp_watcher();
         Self {
             conn,
             fetched_covers: HashSet::new(),
             failed_covers: HashSet::new(),
             in_flight: HashMap::new(),
             pending_downloads: FuturesUnordered::new(),
+            preempted_files: HashMap::new(),
+            tmp_watcher,
         }
+    }
+
+    fn build_tmp_watcher() -> Option<Box<dyn Stream<Item = String> + Unpin + Send>> {
+        let mut inotify = Inotify::init().ok()?;
+        inotify
+            .watches()
+            .add("/tmp", WatchMask::CLOSE_WRITE)
+            .ok()?;
+        let stream = inotify
+            .into_event_stream(vec![0u8; 4096])
+            .ok()?
+            .filter_map(|ev| async move {
+                let ev = ev.ok()?;
+                if ev.mask.contains(EventMask::CLOSE_WRITE) {
+                    let name = ev.name?.to_string_lossy().into_owned();
+                    if name.starts_with(".com.google.Chrome") {
+                        return Some(format!("/tmp/{name}"));
+                    }
+                }
+                None
+            })
+            .boxed();
+        Some(Box::new(stream))
     }
 }
 
@@ -379,6 +410,15 @@ impl MprisPlayerService {
                 let mut chunks = dbus_events.ready_chunks(10);
 
                 loop {
+                    let tmp_next = async {
+                        match state_data.tmp_watcher.as_mut() {
+                            Some(w) => w.next().await,
+                            None => {
+                                std::future::pending::<Option<String>>().await
+                            }
+                        }
+                    };
+
                     select! {
                         chunk = chunks.next().fuse() => {
                             let Some(chunk) = chunk else {
@@ -416,6 +456,21 @@ impl MprisPlayerService {
                                 }
                             }
                         }
+                        path = tmp_next.fuse() => {
+                            if let Some(path) = path {
+                                // Chrome just wrote a temp file — read it immediately
+                                match tokio::fs::read(&path).await {
+                                    Ok(data) => {
+                                        let url = format!("file://{path}");
+                                        debug!("Preemptively cached Chrome temp cover: {url}");
+                                        state_data.preempted_files.insert(url, Bytes::from(data));
+                                    }
+                                    Err(e) => {
+                                        debug!("Failed to preempt Chrome temp file {path}: {e}");
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -433,6 +488,22 @@ impl MprisPlayerService {
         match Self::initialize_data(&state_data.conn).await {
             Ok(data) => {
                 debug!("Refreshing MPRIS player data for {} players", data.len());
+
+                // Flush any preemptively captured file:// covers (e.g. Chrome temp files)
+                for player in &data {
+                    if let Some(url) = player.metadata.as_ref().and_then(|m| m.art_url.as_ref()) {
+                        if let Some(bytes) = state_data.preempted_files.remove(url) {
+                            state_data.fetched_covers.insert(url.clone());
+                            let _ = output
+                                .send(ServiceEvent::Update(Event::CoverFetched(
+                                    url.clone(),
+                                    bytes,
+                                )))
+                                .await;
+                        }
+                    }
+                }
+
                 Self::check_cover_update(&data, state_data);
                 let _ = output
                     .send(ServiceEvent::Update(Event::MetadataChanged(data)))
@@ -448,7 +519,7 @@ impl MprisPlayerService {
         !url.is_empty()
             && url
                 .parse::<reqwest::Url>()
-                .is_ok_and(|u| matches!(u.scheme(), "http" | "https" | "file"))
+                .is_ok_and(|u| matches!(u.scheme(), "http" | "https" | "file" | "data"))
     }
 
     fn check_cover_update(data: &[MprisPlayerData], state_data: &mut ActiveData) {
@@ -494,19 +565,70 @@ impl MprisPlayerService {
     }
 
     async fn fetch_cover(url: &str) -> anyhow::Result<Bytes> {
-        let url = Url::parse(url)?;
-        match url.scheme() {
+        let parsed = Url::parse(url)?;
+        match parsed.scheme() {
             "http" | "https" => {
-                let response = reqwest::get(url).await?;
+                let response = reqwest::get(parsed).await?;
                 Ok(response.bytes().await?)
             }
             "file" => {
-                let path = url
+                let path = parsed
                     .to_file_path()
-                    .map_err(|_| anyhow::anyhow!("Invalid file URL {}", url))?;
-                Ok(tokio::fs::read(path).await?.into())
+                    .map_err(|_| anyhow::anyhow!("Invalid file URL {}", parsed))?;
+
+                // Try direct path first (works for regular Chrome, local files, etc.)
+                if let Ok(data) = tokio::fs::read(&path).await {
+                    return Ok(data.into());
+                }
+
+                // Flatpak apps have a private /tmp not visible on the host.
+                // Fall back to /proc/{pid}/root/{path} to access sandboxed filesystems.
+                if path.starts_with("/tmp") {
+                    let rel = path.strip_prefix("/").unwrap_or(&path);
+                    if let Ok(mut proc_dir) = tokio::fs::read_dir("/proc").await {
+                        while let Ok(Some(entry)) = proc_dir.next_entry().await {
+                            let pid = entry.file_name();
+                            let pid_str = pid.to_string_lossy();
+                            if pid_str.chars().all(|c| c.is_ascii_digit()) {
+                                let alt =
+                                    std::path::Path::new("/proc").join(&*pid_str).join("root").join(rel);
+                                if let Ok(data) = tokio::fs::read(&alt).await {
+                                    debug!(
+                                        "Found cover via /proc/{}/root: {}",
+                                        pid_str,
+                                        path.display()
+                                    );
+                                    return Ok(data.into());
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Err(anyhow::anyhow!("File not found: {}", path.display()))
             }
-            _ => anyhow::bail!("Unsupported URL scheme: {}", url.scheme()),
+            "data" => {
+                // data:[<mediatype>][;base64],<data>
+                let rest = url
+                    .strip_prefix("data:")
+                    .ok_or_else(|| anyhow::anyhow!("Malformed data URI"))?;
+                let comma = rest
+                    .find(',')
+                    .ok_or_else(|| anyhow::anyhow!("No comma in data URI"))?;
+                let meta = &rest[..comma];
+                let data = &rest[comma + 1..];
+                if meta.ends_with(";base64") {
+                    use iced::core::Bytes as IcedBytes;
+                    let decoded = base64::Engine::decode(
+                        &base64::engine::general_purpose::STANDARD,
+                        data,
+                    )?;
+                    Ok(IcedBytes::from(decoded))
+                } else {
+                    Ok(Bytes::from(data.as_bytes().to_vec()))
+                }
+            }
+            _ => anyhow::bail!("Unsupported URL scheme: {}", parsed.scheme()),
         }
     }
 }

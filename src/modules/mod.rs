@@ -5,12 +5,13 @@ use crate::{
     config::{ModuleDef, ModuleName},
     theme::AshellTheme,
 };
-use iced::{Alignment, Element, Length, Subscription, SurfaceId, widget::Row};
+use iced::{Alignment, Element, Length, Padding, Subscription, SurfaceId, widget::{Row, container}};
 
 pub mod custom_module;
 pub mod keyboard_layout;
 pub mod keyboard_submap;
 pub mod media_player;
+pub mod media_player_p;
 pub mod notifications;
 pub mod privacy;
 pub mod settings;
@@ -85,9 +86,23 @@ impl App {
         content: Element<'a, Message>,
         action: Option<OnModulePress>,
     ) -> Element<'a, Message> {
+        self.build_module_item_with_h_padding(id, theme, content, action, None)
+    }
+
+    fn build_module_item_with_h_padding<'a>(
+        &'a self,
+        id: SurfaceId,
+        theme: &'a AshellTheme,
+        content: Element<'a, Message>,
+        action: Option<OnModulePress>,
+        h_padding: Option<f32>,
+    ) -> Element<'a, Message> {
         match action {
             Some(action) => {
                 let mut item = module_item(theme, content);
+                if let Some(p) = h_padding {
+                    item = item.h_padding(p);
+                }
                 match action {
                     OnModulePress::Action(msg) => {
                         item = item.on_press(*msg);
@@ -119,7 +134,13 @@ impl App {
                 }
                 item.into()
             }
-            None => module_item(theme, content).into(),
+            None => {
+                let mut item = module_item(theme, content);
+                if let Some(p) = h_padding {
+                    item = item.h_padding(p);
+                }
+                item.into()
+            }
         }
     }
 
@@ -152,10 +173,14 @@ impl App {
             let items = Row::with_children(
                 modules
                     .into_iter()
-                    .map(|(content, action)| self.build_module_item(id, theme, content, action))
+                    .map(|(content, action)| {
+                        self.build_module_item_with_h_padding(id, theme, content, action, Some(0.0))
+                    })
                     .collect::<Vec<_>>(),
             );
-            Some(module_group(theme, items.into()))
+            let padded = container(items)
+                .padding(Padding::default().horizontal(theme.space.xs));
+            Some(module_group(theme, padded.into()))
         }
     }
 
@@ -255,6 +280,10 @@ impl App {
                     .map(Message::Notifications),
                 Some(OnModulePress::ToggleMenu(MenuType::Notifications)),
             )),
+            ModuleName::MediaPlayerP => self
+                .media_player_p
+                .view(id, &self.theme)
+                .map(|view| (view.map(Message::MediaPlayerP), None)),
         }
     }
 
@@ -292,6 +321,11 @@ impl App {
             ModuleName::MediaPlayer => {
                 Some(self.media_player.subscription().map(Message::MediaPlayer))
             }
+            ModuleName::MediaPlayerP => Some(
+                self.media_player_p
+                    .subscription()
+                    .map(Message::MediaPlayerP),
+            ),
             ModuleName::Settings => Some(self.settings.subscription().map(Message::Settings)),
             ModuleName::Notifications => Some(
                 self.notifications

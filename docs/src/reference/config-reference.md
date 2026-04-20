@@ -75,7 +75,28 @@ update_cmd = "foot -e sudo pacman -Syu" # Command to run updates
 interval = 3600                         # Check interval in seconds
 ```
 
-If the `[updates]` section is omitted entirely, the Updates module is disabled.
+The `check_cmd` output **must** follow this exact format — one package per line, four space-separated fields:
+
+```
+<package> <old_version> -> <new_version>
+```
+
+The Updates module is **disabled** when the `[updates]` section is omitted entirely.
+
+### ALT Linux (Sisyphus / p11)
+
+Copy `examples/alt-linux/check-updates.sh` to `~/.config/ashell/check-updates.sh` and use:
+
+```toml
+[updates]
+interval  = 3600
+check_cmd = "~/.config/ashell/check-updates.sh"
+update_cmd = "kitty --hold -e sudo apt-get dist-upgrade -y"
+```
+
+The script wraps `apt-get dist-upgrade --simulate` and reformats the `Inst` lines
+into the four-field format expected by the parser.
+
 
 ## Workspaces Module
 

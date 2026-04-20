@@ -1,5 +1,5 @@
 [package]
-name = "ashell"
+name = "ashell-alt"
 description = "A ready to go Wayland status bar for Hyprland and Niri"
 homepage = "https://malpenzibo.github.io/ashell/"
 repository = "https://github.com/MalpenZibo/ashell"
@@ -78,6 +78,7 @@ reqwest = { version = "0.13", default-features = false, features = [
   "rustls",
 ] }
 url = "2.5.7"
+base64 = "0.22"
 signal-hook = "0.4.3"
 signal-hook-tokio = { version = "0.4", features = ["futures-v0_3"] }
 libc = "0.2.182"
