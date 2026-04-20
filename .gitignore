@@ -18,3 +18,6 @@ vendor
 # mdbook build output
 docs/book/
 
+# AI agent context file
+Agent.md
+
