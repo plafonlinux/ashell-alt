@@ -1,161 +1,106 @@
-## ALT Linux example configuration for ashell
-## Based on real-world config for Minisforum UM780 XTX (Ryzen 7 7840HS, Niri compositor)
-##
-## === Quick setup ===
-## 1. Install build deps:
-##      sudo apt-get install -y pkg-config clang libLLVM-devel \
-##        libxkbcommon-devel libwayland-devel dbus-devel \
-##        libpipewire0.3-devel libpulse-devel libudev-devel
-##
-## 2. Build:
-##      cargo build --release
-##      sudo make install
-##
-## 3. Copy plugins:
-##      mkdir -p ~/.config/ashell
-##      cp examples/alt-linux/plugins/*.sh ~/.config/ashell/
-##      chmod +x ~/.config/ashell/*.sh
-##
-## 4. Copy this config:
-##      cp examples/alt-linux/config.toml ~/.config/ashell/config.toml
-##
-## 5. Allow passwordless apt-get for the Updates module:
-##      sudo visudo
-##      # Add: your_user ALL=(ALL) NOPASSWD: /usr/bin/apt-get
-
 log_level = "warn"
 outputs = { Targets = ["eDP-1"] }
 position = "Top"
 
 [modules]
-left   = ["Workspaces", "Chrome", "Gemini"]
-center = ["Calendar", "MediaPlayerP"]
-right  = ["Updates", "Vitals", "Tray", "KeyboardLayout", "Settings"]
+left = [ "Workspaces", "Chrome", "Gemini" ]
+center = [ "Calendar", "MediaPlayerP" ]
+right = [ "Updates", "Vitals", "Tray", "KeyboardLayout", "Settings" ]
 
-# ---------------------------------------------------------------------------
-# Updates — ALT Linux / Sisyphus
-# Uses plugins/check-updates.sh to parse apt-get dist-upgrade --simulate
-# ---------------------------------------------------------------------------
-[updates]
-interval   = 3600
-check_cmd  = "sudo apt-get dist-upgrade --simulate 2>/dev/null | awk '/^Inst /{pkg=$2; old=\"\"; new=\"\"; if (match($0, /\\[([^]]+)\\]/, a)) { split(a[1], v, \":\"); old=v[1] } if (match($0, /\\(([^ ]+)/, b)) { split(b[1], v, \":\"); new=v[1] } if (old != \"\") print pkg, old, \"->\", new}'"
-update_cmd = "kitty --hold -e sudo apt-get dist-upgrade -y"
-
-# ---------------------------------------------------------------------------
-# Custom Modules (plugins)
-# All listen_cmd scripts output Waybar-format JSON: {"text": "...", "alt": "..."}
-# ---------------------------------------------------------------------------
-
-## Clock with second precision — click opens gnome-calendar
 [[CustomModule]]
-name       = "Calendar"
-icon       = ""
-format     = "%a %d %b %H:%M:%S"
-command    = "gnome-calendar"
+name = "Calendar"
+icon = ""
+format = "%a %d %b %H:%M:%S"
+command = "gnome-calendar"
 listen_cmd = "while true; do date '+{\"text\": \"%a %d %b %H:%M:%S\", \"alt\": \"calendar\"}'; sleep 1; done"
 
-## Google Chrome launcher
 [[CustomModule]]
-name       = "Chrome"
-icon       = "󰖟 "
-command    = "flatpak run com.google.Chrome"
+name = "Chrome"
+icon = "󰖟 "
+command = "flatpak run com.google.Chrome"
 listen_cmd = "while true; do echo '{\"text\": \"\", \"alt\": \"chrome\"}'; sleep 3600; done"
 
-## Gemini CLI launcher (opens in kitty terminal)
 [[CustomModule]]
-name       = "Gemini"
-icon       = "󱜙 "
-command    = "kitty --class gemini-cli -e gemini"
+name = "Gemini"
+icon = "󱜙 "
+command = "kitty --class gemini-cli -e gemini"
 listen_cmd = "while true; do echo '{\"text\": \"\", \"alt\": \"gemini\"}'; sleep 3600; done"
 
-## System vitals: CPU/GPU/SSD temps + GPU power + Mesa version
-## Optimized for AMD Ryzen 7 7840HS (Minisforum UM780 XTX)
-## Uses plugins/vitals.sh — click opens btop
 [[CustomModule]]
-name       = "Vitals"
-command    = "kitty -e btop"
+name = "Vitals"
+command = "kitty -e btop"
 listen_cmd = "~/.config/ashell/vitals.sh"
 
-# ---------------------------------------------------------------------------
-# Keyboard layouts
-# ---------------------------------------------------------------------------
+[updates]
+interval = 3600
+check_cmd = "sudo apt-get dist-upgrade --simulate 2>/dev/null | awk '/^Inst /{pkg=$2; old=\"\"; new=\"\"; if (match($0, /\\[([^]]+)\\]/, a)) { split(a[1], v, \":\"); old=v[1] } if (match($0, /\\(([^ ]+)/, b)) { split(b[1], v, \":\"); new=v[1] } if (old != \"\") print pkg, old, \"->\", new}'"
+update_cmd = "kitty --hold -e sudo apt-get dist-upgrade -y"
+
 [keyboard_layout.labels]
 "English (US)" = "US"
-"Russian"      = "RU"
+"Russian" = "RU"
 
-# ---------------------------------------------------------------------------
-# Workspaces
-# ---------------------------------------------------------------------------
 [workspaces]
 enable_workspace_filling = true
 show_names = false
 
-# ---------------------------------------------------------------------------
-# Window title
-# ---------------------------------------------------------------------------
 [window_title]
 truncate_title_after_length = 100
 
-# ---------------------------------------------------------------------------
-# Settings panel
-# ---------------------------------------------------------------------------
 [settings]
-lock_cmd               = "playerctl --all-players pause; hyprlock &"
-audio_sinks_more_cmd   = "pavucontrol -t 3"
+lock_cmd = "playerctl --all-players pause; nixGL hyprlock &"
+audio_sinks_more_cmd = "pavucontrol -t 3"
 audio_sources_more_cmd = "pavucontrol -t 4"
-wifi_more_cmd          = "env XDG_CURRENT_DESKTOP=GNOME gnome-control-center"
-vpn_more_cmd           = "env XDG_CURRENT_DESKTOP=GNOME gnome-control-center"
-bluetooth_more_cmd     = "blueman-manager"
+wifi_more_cmd = "env XDG_CURRENT_DESKTOP=GNOME gnome-control-center"
+vpn_more_cmd = "env XDG_CURRENT_DESKTOP=GNOME gnome-control-center"
+bluetooth_more_cmd = "blueman-manager"
 
 [[settings.CustomButton]]
-name    = "Терминал"
-icon    = ""
+name = "Терминал"
+icon = ""
 command = "kitty"
 tooltip = "Открыть терминал"
 
 [[settings.CustomButton]]
-name    = "Файлы"
-icon    = ""
+name = "Файлы"
+icon = ""
 command = "nautilus"
 tooltip = "Открыть файлы"
 
 [[settings.CustomButton]]
-name    = "Bitwarden"
-icon    = ""
+name = "Bitwarden"
+icon = ""
 command = "flatpak run com.bitwarden.desktop"
 tooltip = "Менеджер паролей"
 
 [[settings.CustomButton]]
-name    = "Настройки системы"
-icon    = "⚙️"
+name = "Настройки системы"
+icon = "⚙️"
 command = "env XDG_CURRENT_DESKTOP=GNOME gnome-control-center"
 
 [[settings.CustomButton]]
-name    = "Обои"
-icon    = "󰸉 "
+name = "Обои"
+icon = "󰸉 "
 command = "waypaper"
 tooltip = "Обои для niri"
 
-# ---------------------------------------------------------------------------
-# Appearance — Tokyo Night palette
-# ---------------------------------------------------------------------------
 [appearance]
-style        = "Solid"
+style = "Solid"
 scale_factor = 1
 
-primary_color           = "#f69a0a"
-success_color           = "#9ece6a"
-text_color              = "#a9b1d6"
-workspace_colors        = ["#f69a0a", "#9ece6a"]
-special_workspace_colors = ["#7aa2f7", "#9ece6a"]
+primary_color = "#f69a0a"
+success_color = "#9ece6a"
+text_color = "#a9b1d6"
+workspace_colors = [ "#f69a0a", "#9ece6a" ]
+special_workspace_colors = [ "#7aa2f7", "#9ece6a" ]
 
 [appearance.danger_color]
 base = "#f7768e"
 weak = "#e0af68"
 
 [appearance.background_color]
-base   = "#00000080"
-weak   = "#24273a"
+base = "#00000080"
+weak = "#24273a"
 strong = "#414868"
 
 [appearance.secondary_color]
