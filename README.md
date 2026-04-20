@@ -66,6 +66,30 @@
 Refer to the [Installation](https://malpenzibo.github.io/ashell/docs/installation)
 page for more details.
 
+### ALT Linux (Sisyphus и p11)
+
+```bash
+sudo apt-get install -y pkg-config clang clang21.1 \
+  libxkbcommon-devel wayland-devel libdbus-devel \
+  pipewire-libs-devel libpulseaudio-devel libudev-devel
+
+git clone https://github.com/plafonlinux/ashell-alt.git
+cd ashell-alt
+cargo build --release
+sudo make install
+```
+
+Скопируйте конфиг и плагины:
+
+```bash
+mkdir -p ~/.config/ashell
+cp examples/alt-linux/config.toml ~/.config/ashell/config.toml
+cp examples/alt-linux/plugins/*.sh ~/.config/ashell/
+chmod +x ~/.config/ashell/*.sh
+```
+
+> Отредактируйте `~/.config/ashell/config.toml` — замените `eDP-1` на имя вашего монитора (`niri msg outputs | grep name`).
+
 ## ⚙️ Configuration
 
 ashell comes with a default configuration that should work out of the box.
