@@ -14,6 +14,10 @@
     <a href="https://malpenzibo.github.io/ashell/docs/intro">Getting Started</a> | <a href="https://malpenzibo.github.io/ashell/docs/configuration">Configuration</a> | <a href="https://malpenzibo.github.io/ashell/dev-guide/">Developer&nbsp;Guide</a>
 </p>
 
+<p align="center">
+    <img src="screenshots/ashell-alt-preview.png" alt="ashell-alt preview"/>
+</p>
+
 ## ✨ Features
 
 - Automatic Hyprland/Niri compositor detection
