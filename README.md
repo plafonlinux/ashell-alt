@@ -17,6 +17,12 @@
 <p align="center">
     <img src="screenshots/ashell-alt-preview.png" alt="ashell-alt preview"/>
 </p>
+<p align="center">
+    <img src="screenshots/ashell-alt-preview-2.png" alt="ashell-alt preview 2"/>
+</p>
+<p align="center">
+    <img src="screenshots/ashell-alt-preview-3.png" alt="ashell-alt preview 3"/>
+</p>
 
 ## ✨ Features
 
