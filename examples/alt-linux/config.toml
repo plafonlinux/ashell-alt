@@ -29,7 +29,7 @@ position = "Top"
 
 [modules]
 left   = ["Workspaces", "Chrome", "Gemini"]
-center = ["Calendar", "MusicPrev", "MusicPlayer", "MusicNext"]
+center = ["Calendar", "MediaPlayerP"]
 right  = ["Updates", "Vitals", "Tray", "KeyboardLayout", "Settings"]
 
 # ---------------------------------------------------------------------------
@@ -37,8 +37,8 @@ right  = ["Updates", "Vitals", "Tray", "KeyboardLayout", "Settings"]
 # Uses plugins/check-updates.sh to parse apt-get dist-upgrade --simulate
 # ---------------------------------------------------------------------------
 [updates]
-interval  = 3600
-check_cmd = "~/.config/ashell/check-updates.sh"
+interval   = 3600
+check_cmd  = "sudo apt-get dist-upgrade --simulate 2>/dev/null | awk '/^Inst /{pkg=$2; old=\"\"; new=\"\"; if (match($0, /\\[([^]]+)\\]/, a)) { split(a[1], v, \":\"); old=v[1] } if (match($0, /\\(([^ ]+)/, b)) { split(b[1], v, \":\"); new=v[1] } if (old != \"\") print pkg, old, \"->\", new}'"
 update_cmd = "kitty --hold -e sudo apt-get dist-upgrade -y"
 
 # ---------------------------------------------------------------------------
@@ -50,29 +50,9 @@ update_cmd = "kitty --hold -e sudo apt-get dist-upgrade -y"
 [[CustomModule]]
 name       = "Calendar"
 icon       = ""
+format     = "%a %d %b %H:%M:%S"
 command    = "gnome-calendar"
 listen_cmd = "while true; do date '+{\"text\": \"%a %d %b %H:%M:%S\", \"alt\": \"calendar\"}'; sleep 1; done"
-
-## Media player previous track button (hidden when no player active)
-[[CustomModule]]
-name       = "MusicPrev"
-icon       = "󰒮"
-command    = "playerctl previous"
-listen_cmd = "~/.config/ashell/musicplayer.sh check"
-
-## Media player: shows artist — title with play/pause icon, click toggles playback
-## Uses plugins/musicplayer.sh
-[[CustomModule]]
-name       = "MusicPlayer"
-command    = "playerctl play-pause"
-listen_cmd = "~/.config/ashell/musicplayer.sh info"
-
-## Media player next track button
-[[CustomModule]]
-name       = "MusicNext"
-icon       = "󰒭"
-command    = "playerctl next"
-listen_cmd = "~/.config/ashell/musicplayer.sh check"
 
 ## Google Chrome launcher
 [[CustomModule]]
@@ -108,6 +88,7 @@ listen_cmd = "~/.config/ashell/vitals.sh"
 # ---------------------------------------------------------------------------
 [workspaces]
 enable_workspace_filling = true
+show_names = false
 
 # ---------------------------------------------------------------------------
 # Window title
