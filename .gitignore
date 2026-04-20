@@ -18,6 +18,7 @@ vendor
 # mdbook build output
 docs/book/
 
-# AI agent context file
+# AI agent context files
 Agent.md
+CLAUDE.md
 
